@@ -1,0 +1,217 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Manrope", "Segoe UI", system-ui, sans-serif;
+  --color-bg: #101014;
+  --color-surface: #1c1c24;
+  --color-elevated: #262630;
+  --color-fg: #f2f2f6;
+  --color-muted: #9b9ba8;
+  --color-subtle: #6c6c78;
+  --color-line: #32323c;
+  --color-primary: #2e9a4a;
+  --color-primary-hi: #3cb85c;
+  --color-danger: #c42b2b;
+  --color-danger-hi: #e04444;
+  --color-toast: #3a3a44;
+  --color-toast-err: #6a1b1b;
+  --color-overlay: #000000b8;
+  --color-field: #16161c;
+  --color-ghost: #3a3a46;
+  --color-ghost-hi: #484856;
+  --color-action: #23232c;
+  --color-action-hi: #2e2e38;
+  --radius-md: 0px;
+  --shadow-border: 0 0 0 1px #ffffff0f;
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@layer base {
+  html,
+  body,
+  #app,
+  #root {
+    min-height: 100%;
+  }
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  body {
+    background: var(--color-bg);
+    color: var(--color-fg);
+    font-family: var(--font-sans);
+    margin: 0;
+  }
+  h1,
+  h2,
+  h3 {
+    text-wrap: balance;
+  }
+  p {
+    text-wrap: pretty;
+  }
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+  input {
+    border-radius: 0;
+    font-family: inherit;
+  }
+}
+
+@layer components {
+  .btn-fill {
+    white-space: nowrap;
+    text-align: center;
+    letter-spacing: -0.01em;
+    color: var(--color-fg);
+    transition:
+      background-color 0.15s var(--ease-out),
+      color 0.15s var(--ease-out),
+      transform 0.15s var(--ease-out);
+    border: 0;
+    border-radius: 0;
+    justify-content: center;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 600;
+    display: inline-flex;
+  }
+  .btn-fill:active:not(:disabled) {
+    transform: scale(0.96);
+  }
+  .btn-green {
+    background: #2e8a44;
+  }
+  .btn-green:hover:not(:disabled) {
+    background: #35964c;
+  }
+  .btn-ghost {
+    background: var(--color-ghost);
+  }
+  .btn-ghost:hover:not(:disabled) {
+    background: var(--color-ghost-hi);
+  }
+  .btn-red {
+    background: var(--color-danger);
+  }
+  .btn-red:hover:not(:disabled) {
+    background: var(--color-danger-hi);
+  }
+  .field {
+    background: var(--color-field);
+    width: 100%;
+    height: 2.75rem;
+    color: var(--color-fg);
+    border: 0;
+    border-radius: 0;
+    outline: none;
+    padding: 0 1rem;
+    font-size: 0.9375rem;
+  }
+  .field::placeholder {
+    color: var(--color-subtle);
+  }
+  .field:focus {
+    box-shadow: 0 0 0 2px #2e9a4a8c;
+  }
+  .card-action {
+    background: var(--color-action);
+    width: 100%;
+    height: 2.5rem;
+    color: var(--color-muted);
+    letter-spacing: -0.01em;
+    transition:
+      background-color 0.15s var(--ease-out),
+      color 0.15s var(--ease-out);
+    border: 0;
+    border-top: 1px solid #e8e8ee;
+    border-radius: 0;
+    justify-content: center;
+    align-items: center;
+    font-size: 0.75rem;
+    font-weight: 600;
+    display: flex;
+  }
+  .card-action:hover:not(:disabled) {
+    background: var(--color-action-hi);
+    color: var(--color-fg);
+  }
+  .log-box {
+    background: var(--color-surface);
+    box-shadow: inset 0 0 0 1px #ffffff0f;
+  }
+  .splash-ring {
+    border: 3px solid #ffffff24;
+    border-top-color: #fff;
+    border-radius: 50%;
+    width: 56px;
+    height: 56px;
+    animation: 0.9s linear infinite splash-spin;
+  }
+  .splash-copy {
+    transition:
+      opacity 0.7s var(--ease-out),
+      filter 0.7s var(--ease-out),
+      transform 0.7s var(--ease-out);
+  }
+  .splash-in {
+    opacity: 1;
+    filter: blur();
+    transform: translateY(0);
+  }
+  .splash-out {
+    opacity: 0;
+    filter: blur(6px);
+    transform: translateY(6px);
+  }
+  .modal-enter {
+    animation: modal-in 0.25s var(--ease-out);
+  }
+  .backdrop-enter {
+    animation: fade-in 0.25s var(--ease-out);
+  }
+}
+
+@keyframes splash-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes modal-in {
+  0% {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+@keyframes fade-in {
+  0% {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .btn-fill,
+  .card-action,
+  .splash-copy {
+    transition: none;
+  }
+  .modal-enter,
+  .backdrop-enter,
+  .splash-ring {
+    animation: none;
+  }
+  .splash-out {
+    filter: none;
+    transform: none;
+  }
+}
