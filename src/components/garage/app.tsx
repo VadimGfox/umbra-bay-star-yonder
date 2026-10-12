@@ -2,17 +2,17 @@ import { useCallback, useEffect, useState } from "react";
 import { Car } from "lucide-react";
 import { CarCard } from "@/components/garage/car-card";
 import { GarageHeader } from "@/components/garage/header";
-import { GarageOverlays, GarageToasts, SplashScreen } from "@/components/garage/overlays";
+import { ApiGlyph } from "@/components/garage/icons";
+import { GarageOverlays, GarageToasts } from "@/components/garage/overlays";
+import { AmbientDust } from "@/components/garage/particles";
+import { SplashScreen } from "@/components/garage/splash";
 import { useGarage } from "@/lib/garage/store";
 import { filterCars, playClick } from "@/lib/garage/utils";
-
-function isDesktopShell() {
-  return typeof window !== "undefined" && Boolean((window as Window & { garageDesktop?: unknown }).garageDesktop);
-}
 
 function GarageShell() {
   const cars = useGarage((s) => s.cars);
   const search = useGarage((s) => s.search);
+  const openApi = useGarage((s) => s.openApi);
   const openWizard = useGarage((s) => s.openWizard);
   const bootCheck = useGarage((s) => s.bootCheck);
   const visible = filterCars(cars, search);
@@ -25,9 +25,10 @@ function GarageShell() {
   }, [bootCheck]);
 
   return (
-    <div className="flex min-h-dvh flex-col bg-bg">
+    <div className="relative flex min-h-dvh flex-col">
+      <AmbientDust />
       <GarageHeader />
-      <main className="flex min-h-0 flex-1 flex-col px-3 pt-4 pb-28 md:px-5 md:pt-4">
+      <main className="relative z-10 flex min-h-0 flex-1 flex-col px-3 pt-4 pb-28 md:px-5 md:pt-4">
         {visible.length === 0 ? (
           <div className="flex flex-1 flex-col items-center justify-center px-6">
             <Car className="mb-4 size-10 text-subtle" strokeWidth={1.5} />
@@ -57,6 +58,17 @@ function GarageShell() {
           </div>
         )}
       </main>
+      <button
+        type="button"
+        className="api-btn"
+        onClick={() => {
+          playClick();
+          openApi();
+        }}
+      >
+        <ApiGlyph className="size-4" />
+        <span>API</span>
+      </button>
       <GarageOverlays />
       <GarageToasts />
     </div>
@@ -64,7 +76,7 @@ function GarageShell() {
 }
 
 export function GarageApp() {
-  const [ready, setReady] = useState(!isDesktopShell());
+  const [ready, setReady] = useState(false);
   const onDone = useCallback(() => setReady(true), []);
   if (!ready) return <SplashScreen onDone={onDone} />;
   return <GarageShell />;

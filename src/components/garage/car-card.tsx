@@ -1,3 +1,4 @@
+import { useRef } from "react";
 import { Clock } from "lucide-react";
 import type { Car } from "@/lib/garage/types";
 import { useGarage } from "@/lib/garage/store";
@@ -8,9 +9,32 @@ export function CarCard({ car }: { car: Car }) {
   const openDelete = useGarage((s) => s.openDelete);
   const openDetails = useGarage((s) => s.openDetails);
   const plate = formatPlate(car.plate, car.region);
+  const ref = useRef<HTMLElement>(null);
+
+  const tilt = (event: React.MouseEvent<HTMLElement>) => {
+    const el = ref.current;
+    if (!el) return;
+    const box = el.getBoundingClientRect();
+    const px = (event.clientX - box.left) / box.width - 0.5;
+    const py = (event.clientY - box.top) / box.height - 0.5;
+    el.style.transition = "transform 0.05s linear";
+    el.style.transform = `perspective(900px) rotateX(${(-py * 7).toFixed(2)}deg) rotateY(${(px * 9).toFixed(2)}deg)`;
+  };
+
+  const rest = () => {
+    const el = ref.current;
+    if (!el) return;
+    el.style.transition = "transform 0.45s cubic-bezier(0.22, 1, 0.36, 1)";
+    el.style.transform = "perspective(900px) rotateX(0deg) rotateY(0deg)";
+  };
 
   return (
-    <article className="flex w-44 shrink-0 flex-col overflow-hidden bg-surface shadow-[var(--shadow-border)] md:w-48">
+    <article
+      ref={ref}
+      className="car-tilt flex w-44 shrink-0 flex-col overflow-hidden bg-surface shadow-[var(--shadow-border)] md:w-48"
+      onMouseMove={tilt}
+      onMouseLeave={rest}
+    >
       <div className="flex items-center gap-1 px-2.5 py-1.5 text-xs text-muted">
         <Clock className="size-3" />
         <span className="tabular-nums">{hoursLabel(car.hours)}</span>

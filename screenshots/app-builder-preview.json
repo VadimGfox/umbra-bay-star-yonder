@@ -5,11 +5,11 @@
       "width": 1280,
       "height": 800,
       "status": 200,
-      "title": "Гараж",
-      "hasCanvas": false,
-      "bodyTextLen": 25,
-      "bodyTextHash": "4318d8099fff9e7a9d4a056e8529fe6b51e27e7ab8467cd8fea7eb68396b9dca",
-      "bodyTextPrefix": "Загрузка Powered by Venom",
+      "title": "Dark Rent",
+      "hasCanvas": true,
+      "bodyTextLen": 35,
+      "bodyTextHash": "e3ac5b7081794128fa5937708e7e4621b7229c9f01fe0b551753cf7963a57047",
+      "bodyTextPrefix": "DARK RENT Загрузка Powered by Venom",
       "horizontalOverflow": false,
       "consoleErrors": [],
       "pageErrors": [],
@@ -19,11 +19,11 @@
       "width": 390,
       "height": 844,
       "status": 200,
-      "title": "Гараж",
-      "hasCanvas": false,
-      "bodyTextLen": 25,
-      "bodyTextHash": "4318d8099fff9e7a9d4a056e8529fe6b51e27e7ab8467cd8fea7eb68396b9dca",
-      "bodyTextPrefix": "Загрузка Powered by Venom",
+      "title": "Dark Rent",
+      "hasCanvas": true,
+      "bodyTextLen": 35,
+      "bodyTextHash": "e3ac5b7081794128fa5937708e7e4621b7229c9f01fe0b551753cf7963a57047",
+      "bodyTextPrefix": "DARK RENT Загрузка Powered by Venom",
       "horizontalOverflow": false,
       "consoleErrors": [],
       "pageErrors": [],
@@ -31,7 +31,8 @@
     }
   },
   "brandWarnings": [
-    "BRAND NOTE: no custom public/og.jpg — the platform will serve the og.grok.me placeholder. Custom cards are the default for games of every kind (DOM board/word games included), whimsical apps, creative tools, and brand-forward pages — only plain utilities (converters, CRUD trackers, admin dashboards) keep the placeholder. If this app is not a plain utility, finish the brand-asset pass per /workspace/.grok/skills/og/SKILL.md."
+    "BRAND WARNING: this looks like a game/canvas app but /workspace/public/og.jpg is missing. Games and visually rich apps must ship a custom 1200x630 share card built from the app's own art — the default og.grok.me placeholder card is not acceptable for them. You are not done: open /workspace/.grok/skills/og/SKILL.md and finish the brand-asset pass.",
+    "BRAND WARNING: this looks like a game/canvas app but src/lib/og/site.json is missing \"type\": \"x:game\". X uses og:type=x:game to present the unfurl as a game card — set it in /workspace/src/lib/og/site.json per /workspace/.grok/skills/og/SKILL.md. Do not invent x:type or overload twitter:card as the game signal."
   ],
   "authWarnings": [],
   "verdictFile": "/workspace/screenshots/app-builder-preview.json"

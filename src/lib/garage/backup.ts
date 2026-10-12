@@ -1,4 +1,4 @@
-import { BACKUP_KIND, BACKUP_MARKER, STORAGE_VERSION, type Car } from "./types";
+import { APP_NAME, BACKUP_KIND, BACKUP_MARKER, STORAGE_VERSION, type Car } from "./types";
 import {
   formatPlate,
   hoursLabel,
@@ -11,7 +11,7 @@ import {
 
 export type GarageBackup = {
   kind: typeof BACKUP_KIND;
-  app: "Гараж";
+  app: typeof APP_NAME;
   version: number;
   exportedAt: number;
   exportedAtMsk: string;
@@ -39,7 +39,7 @@ export function backupFilename(date = new Date()) {
 export function readableLog(cars: Car[], date = new Date()) {
   const t = moscowParts(date);
   const lines = [
-    "Выгрузка лога автомобилей",
+    "Выгрузка лога Dark Rent",
     `Дата: ${t.day}.${t.month}.${t.year} ${t.hour}:${t.minute} (МСК)`,
     `Автомобилей: ${cars.length}`,
     "Полная копия базы (карточки, фото, история и заработок) сохранена в блоке ниже.",
@@ -78,7 +78,7 @@ export function buildBackup(cars: Car[], date = new Date()): GarageBackup {
   const t = moscowParts(date);
   return {
     kind: BACKUP_KIND,
-    app: "Гараж",
+    app: APP_NAME,
     version: STORAGE_VERSION,
     exportedAt: date.getTime(),
     exportedAtMsk: `${t.day}.${t.month}.${t.year} ${t.hour}:${t.minute}`,

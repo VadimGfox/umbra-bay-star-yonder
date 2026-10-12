@@ -17,3 +17,22 @@ export function CarGlyph({ className }: { className?: string }) {
     </svg>
   );
 }
+
+export function ApiGlyph({ className }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.6"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M8 9 4.5 12 8 15" />
+      <path d="M16 9 19.5 12 16 15" />
+      <path d="M13.2 6.5 10.8 17.5" />
+    </svg>
+  );
+}

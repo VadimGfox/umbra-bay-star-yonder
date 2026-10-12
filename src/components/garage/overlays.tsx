@@ -1,29 +1,33 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
 import { Clock } from "lucide-react";
+import { ApiPanel } from "@/components/garage/api-panel";
 import { DetailsOverlay } from "@/components/garage/details";
+import { MarketPanel } from "@/components/garage/market-panel";
+import { WizardModal } from "@/components/garage/wizard-modal";
 import { useGarage } from "@/lib/garage/store";
-import { playClick, readCarImage, sanitizePlate, sanitizeRegion } from "@/lib/garage/utils";
+import { money, playClick, sanitizePlate, sanitizeRegion } from "@/lib/garage/utils";
 
 function Modal({
   children,
   wide,
+  roomy,
   layer,
+  blur,
 }: {
   children: ReactNode;
   wide?: boolean;
+  roomy?: boolean;
   layer?: "sub" | "main";
+  blur?: boolean;
 }) {
+  const width = roomy ? "max-w-xl" : wide ? "max-w-md" : "max-w-sm";
   return (
     <div
-      className={`backdrop-enter fixed inset-0 flex items-center justify-center bg-overlay p-4 ${
+      className={`backdrop-enter fixed inset-0 flex items-center justify-center p-4 ${
         layer === "sub" ? "z-50" : "z-40"
-      }`}
+      } ${blur ? "backdrop-blurred" : "backdrop-plain"}`}
     >
-      <div
-        className={`modal-enter w-full bg-elevated px-8 py-8 ${wide ? "max-w-md" : "max-w-sm"}`}
-        role="dialog"
-        aria-modal="true"
-      >
+      <div className={`modal-enter w-full bg-elevated px-8 py-8 ${width}`} role="dialog" aria-modal="true">
         {children}
       </div>
     </div>
@@ -48,7 +52,7 @@ function RentOverlay() {
 
   if (rentStep === "pick") {
     return (
-      <Modal wide>
+      <Modal wide blur>
         <h2 className="text-center text-lg font-semibold">Сдать в аренду</h2>
         <div className="mt-8 flex flex-col gap-3 sm:flex-row">
           <button
@@ -92,38 +96,29 @@ function RentOverlay() {
 
   if (rentStep === "duration") {
     const daily = rentKind === "daily";
+    const count = daily ? 7 : 24;
+    const pick = useGarage.getState().pickRentDuration;
     return (
-      <Modal>
+      <Modal roomy blur>
         <h2 className="text-center text-lg font-semibold">
           {daily ? "На сколько суток ушла машина?" : "На сколько часов ушла машина?"}
         </h2>
-        <div className="mx-auto mt-6 w-full max-w-xs">
-          <input
-            className="field"
-            autoFocus
-            inputMode="numeric"
-            placeholder={daily ? "1" : "2"}
-            value={rentDuration}
-            onChange={(event) => setRentDuration(event.target.value)}
-            onKeyDown={(event) => {
-              if (event.key === "Enter") {
+        <div className={`mx-auto mt-6 grid w-full gap-1.5 ${daily ? "max-w-md grid-cols-7" : "grid-cols-6"}`}>
+          {Array.from({ length: count }, (_, i) => i + 1).map((n) => (
+            <button
+              key={n}
+              type="button"
+              className={`btn-fill h-9 text-xs ${rentDuration === String(n) ? "btn-green" : "btn-ghost"}`}
+              onClick={() => {
                 playClick();
-                rentNext();
-              }
-            }}
-          />
+                pick(n);
+              }}
+            >
+              {n}
+            </button>
+          ))}
         </div>
         <ModalActions>
-          <button
-            type="button"
-            className="btn-fill btn-green h-11 min-w-32 px-6 text-sm"
-            onClick={() => {
-              playClick();
-              rentNext();
-            }}
-          >
-            Далее
-          </button>
           <button
             type="button"
             className="btn-fill btn-ghost h-11 min-w-32 px-6 text-sm"
@@ -140,23 +135,35 @@ function RentOverlay() {
   }
 
   return (
-    <Modal>
+    <Modal blur>
       <h2 className="text-center text-lg font-semibold">За сколько ушла машина?</h2>
       <div className="mx-auto mt-6 w-full max-w-xs">
-        <input
-          className="field"
-          autoFocus
-          inputMode="decimal"
-          placeholder="0"
-          value={rentAmount}
-          onChange={(event) => setRentAmount(event.target.value)}
-          onKeyDown={(event) => {
-            if (event.key === "Enter") {
+        <div className="relative">
+          <input
+            className="field pr-28"
+            autoFocus
+            inputMode="decimal"
+            placeholder="0"
+            value={rentAmount}
+            onChange={(event) => setRentAmount(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") {
+                playClick();
+                rentNext();
+              }
+            }}
+          />
+          <button
+            type="button"
+            className="absolute top-1/2 right-3 -translate-y-1/2 text-xs font-semibold text-muted hover:text-fg"
+            onClick={() => {
               playClick();
-              rentNext();
-            }
-          }}
-        />
+              useGarage.getState().fillRentFromTariff();
+            }}
+          >
+            По тарифу
+          </button>
+        </div>
         <p className="mt-2 text-right text-xs text-subtle">руб.</p>
       </div>
       <ModalActions>
@@ -194,6 +201,8 @@ function SubModals() {
   const draftExpense = useGarage((s) => s.draftExpense);
   const setDraftExpense = useGarage((s) => s.setDraftExpense);
   const saveExpense = useGarage((s) => s.saveExpense);
+  const expenseSign = useGarage((s) => s.expenseSign);
+  const expenseTarget = useGarage((s) => s.expenseTarget);
   const draftEarnToday = useGarage((s) => s.draftEarnToday);
   const draftEarnWeek = useGarage((s) => s.draftEarnWeek);
   const draftEarnMonth = useGarage((s) => s.draftEarnMonth);
@@ -204,6 +213,32 @@ function SubModals() {
   const setDraftEarnTotal = useGarage((s) => s.setDraftEarnTotal);
   const saveEditEarn = useGarage((s) => s.saveEditEarn);
   const confirmClearLog = useGarage((s) => s.confirmClearLog);
+  const logRange = useGarage((s) => s.logRange);
+  const draftCarName = useGarage((s) => s.draftCarName);
+  const setDraftCarName = useGarage((s) => s.setDraftCarName);
+  const saveRename = useGarage((s) => s.saveRename);
+  const draftOwnedDays = useGarage((s) => s.draftOwnedDays);
+  const setDraftOwnedDays = useGarage((s) => s.setDraftOwnedDays);
+  const saveOwnedDays = useGarage((s) => s.saveOwnedDays);
+  const confirmUndoRent = useGarage((s) => s.confirmUndoRent);
+  const savePlate = useGarage((s) => s.savePlate);
+  const draftPlate = useGarage((s) => s.draftPlate);
+  const draftRegion = useGarage((s) => s.draftRegion);
+  const setDraftPlate = useGarage((s) => s.setDraftPlate);
+  const setDraftRegion = useGarage((s) => s.setDraftRegion);
+  const openTariffEdit = useGarage((s) => s.openTariffEdit);
+  const tariffKind = useGarage((s) => s.tariffKind);
+  const tariffDraft = useGarage((s) => s.tariffDraft);
+  const setTariffDraft = useGarage((s) => s.setTariffDraft);
+  const saveTariffEdit = useGarage((s) => s.saveTariffEdit);
+  const draftSale = useGarage((s) => s.draftSale);
+  const setDraftSale = useGarage((s) => s.setDraftSale);
+  const confirmSell = useGarage((s) => s.confirmSell);
+  const acceptSell = useGarage((s) => s.acceptSell);
+  const saleNet = useGarage((s) => s.saleNet);
+  const detailsId = useGarage((s) => s.detailsId);
+  const cars = useGarage((s) => s.cars);
+  const car = cars.find((row) => row.id === detailsId);
 
   if (subModal === "official") {
     return (
@@ -253,9 +288,18 @@ function SubModals() {
   }
 
   if (subModal === "expense") {
+    const sub = expenseSign < 0;
+    const repair = expenseTarget === "repair";
+    const title = repair
+      ? sub
+        ? "Убавить ремонт"
+        : "Добавить ремонт"
+      : sub
+        ? "Убавить расходы"
+        : "Добавить расходы";
     return (
       <Modal layer="sub">
-        <h2 className="text-center text-lg font-semibold">Добавить расходы</h2>
+        <h2 className="text-center text-lg font-semibold">{title}</h2>
         <div className="mx-auto mt-6 w-full max-w-xs">
           <input
             className="field"
@@ -367,12 +411,136 @@ function SubModals() {
     );
   }
 
+  if (subModal === "rename") {
+    return (
+      <Modal layer="sub">
+        <h2 className="text-center text-lg font-semibold">Название авто</h2>
+        <div className="mx-auto mt-6 w-full max-w-xs">
+          <input
+            className="field"
+            autoFocus
+            value={draftCarName}
+            onChange={(event) => setDraftCarName(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") {
+                playClick();
+                saveRename();
+              }
+            }}
+          />
+        </div>
+        <ModalActions>
+          <button
+            type="button"
+            className="btn-fill btn-green h-11 min-w-32 px-6 text-sm"
+            onClick={() => {
+              playClick();
+              saveRename();
+            }}
+          >
+            Сохранить
+          </button>
+          <button
+            type="button"
+            className="btn-fill btn-ghost h-11 min-w-32 px-6 text-sm"
+            onClick={() => {
+              playClick();
+              closeOverlay();
+            }}
+          >
+            Отмена
+          </button>
+        </ModalActions>
+      </Modal>
+    );
+  }
+
+  if (subModal === "owned-days") {
+    return (
+      <Modal layer="sub">
+        <h2 className="text-center text-lg font-semibold">Дней во владении</h2>
+        <div className="mx-auto mt-6 w-full max-w-xs">
+          <input
+            className="field"
+            autoFocus
+            inputMode="numeric"
+            value={draftOwnedDays}
+            onChange={(event) => setDraftOwnedDays(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") {
+                playClick();
+                saveOwnedDays();
+              }
+            }}
+          />
+        </div>
+        <ModalActions>
+          <button
+            type="button"
+            className="btn-fill btn-green h-11 min-w-32 px-6 text-sm"
+            onClick={() => {
+              playClick();
+              saveOwnedDays();
+            }}
+          >
+            Сохранить
+          </button>
+          <button
+            type="button"
+            className="btn-fill btn-ghost h-11 min-w-32 px-6 text-sm"
+            onClick={() => {
+              playClick();
+              closeOverlay();
+            }}
+          >
+            Отмена
+          </button>
+        </ModalActions>
+      </Modal>
+    );
+  }
+
+  if (subModal === "undo-rent") {
+    return (
+      <Modal layer="sub">
+        <h2 className="text-center text-lg font-semibold">Отменить последнюю аренду?</h2>
+        <p className="mt-3 text-center text-sm leading-relaxed text-muted">
+          Вы точно хотите отменить последнюю аренду? Сумма и запись исчезнут из логов.
+        </p>
+        <ModalActions>
+          <button
+            type="button"
+            className="btn-fill btn-red h-11 min-w-36 px-5 text-sm"
+            onClick={() => {
+              playClick();
+              confirmUndoRent();
+            }}
+          >
+            Отменить
+          </button>
+          <button
+            type="button"
+            className="btn-fill btn-ghost h-11 min-w-32 px-5 text-sm"
+            onClick={() => {
+              playClick();
+              closeOverlay();
+            }}
+          >
+            Назад
+          </button>
+        </ModalActions>
+      </Modal>
+    );
+  }
+
   if (subModal === "clear-log") {
     return (
       <Modal layer="sub">
         <h2 className="text-center text-lg font-semibold">Очистить лог?</h2>
         <p className="mt-3 text-center text-sm leading-relaxed text-muted">
-          Вы уверены, что хотите очистить лог за неделю?
+          {logRange === "month"
+            ? "Вы уверены, что хотите очистить лог за месяц?"
+            : "Вы уверены, что хотите очистить лог за неделю?"}
         </p>
         <ModalActions>
           <button
@@ -400,38 +568,258 @@ function SubModals() {
     );
   }
 
+  if (subModal === "plate") {
+    return (
+      <Modal layer="sub" wide>
+        <h2 className="text-center text-lg font-semibold">Госномер</h2>
+        <div className="mx-auto mt-6 flex w-full max-w-sm items-end justify-center gap-3">
+          <label className="block min-w-0 flex-1">
+            <span className="mb-1.5 block text-xs text-muted">Номер</span>
+            <input
+              className="field font-semibold tracking-[0.18em]"
+              autoFocus
+              placeholder="А123АА"
+              value={draftPlate}
+              maxLength={6}
+              onChange={(event) => setDraftPlate(sanitizePlate(event.target.value))}
+              aria-label="Госномер"
+            />
+          </label>
+          <label className="block w-[4.75rem] shrink-0">
+            <span className="mb-1.5 block text-xs text-muted">Регион</span>
+            <input
+              className="field px-2 text-center font-semibold tabular-nums"
+              inputMode="numeric"
+              placeholder="777"
+              value={draftRegion}
+              maxLength={3}
+              onChange={(event) => setDraftRegion(sanitizeRegion(event.target.value))}
+              aria-label="Регион"
+            />
+          </label>
+        </div>
+        <ModalActions>
+          <button
+            type="button"
+            className="btn-fill btn-green h-11 min-w-32 px-6 text-sm"
+            onClick={() => {
+              playClick();
+              savePlate();
+            }}
+          >
+            Сохранить
+          </button>
+          <button
+            type="button"
+            className="btn-fill btn-ghost h-11 min-w-32 px-6 text-sm"
+            onClick={() => {
+              playClick();
+              closeOverlay();
+            }}
+          >
+            Отмена
+          </button>
+        </ModalActions>
+      </Modal>
+    );
+  }
+
+  if (subModal === "tariff") {
+    const hourly = car?.hourlyRate;
+    const daily = car?.dailyRate;
+    return (
+      <Modal layer="sub" wide>
+        <h2 className="text-center text-lg font-semibold">Тариф</h2>
+        <div className="mt-6 space-y-3">
+          <div className="flex items-center justify-between gap-3 border border-line px-4 py-3">
+            <div>
+              <p className="text-xs text-muted">Часовой</p>
+              <p className="mt-1 text-sm font-medium tabular-nums">
+                {hourly == null ? "не задан" : `${money(hourly)} / час`}
+              </p>
+            </div>
+            <button
+              type="button"
+              className="btn-fill btn-ghost h-9 px-3 text-xs"
+              onClick={() => {
+                playClick();
+                openTariffEdit("hourly", "car");
+              }}
+            >
+              Изменить
+            </button>
+          </div>
+          <div className="flex items-center justify-between gap-3 border border-line px-4 py-3">
+            <div>
+              <p className="text-xs text-muted">Суточный</p>
+              <p className="mt-1 text-sm font-medium tabular-nums">
+                {daily == null ? "не задан" : `${money(daily)} / день`}
+              </p>
+            </div>
+            <button
+              type="button"
+              className="btn-fill btn-ghost h-9 px-3 text-xs"
+              onClick={() => {
+                playClick();
+                openTariffEdit("daily", "car");
+              }}
+            >
+              Изменить
+            </button>
+          </div>
+        </div>
+        <ModalActions>
+          <button
+            type="button"
+            className="btn-fill btn-ghost h-11 min-w-32 px-6 text-sm"
+            onClick={() => {
+              playClick();
+              closeOverlay();
+            }}
+          >
+            Закрыть
+          </button>
+        </ModalActions>
+      </Modal>
+    );
+  }
+
+  if (subModal === "tariff-edit") {
+    const daily = tariffKind === "daily";
+    return (
+      <Modal layer="sub">
+        <h2 className="text-center text-lg font-semibold">{daily ? "Суточный тариф" : "Часовой тариф"}</h2>
+        <div className="mx-auto mt-6 w-full max-w-xs">
+          <input
+            className="field"
+            autoFocus
+            inputMode="decimal"
+            placeholder="0"
+            value={tariffDraft}
+            onChange={(event) => setTariffDraft(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") {
+                playClick();
+                saveTariffEdit();
+              }
+            }}
+          />
+          <p className="mt-2 text-right text-xs text-subtle">{daily ? "руб. в день" : "руб. в час"}</p>
+        </div>
+        <ModalActions>
+          <button
+            type="button"
+            className="btn-fill btn-green h-11 min-w-32 px-6 text-sm"
+            onClick={() => {
+              playClick();
+              saveTariffEdit();
+            }}
+          >
+            Сохранить
+          </button>
+          <button
+            type="button"
+            className="btn-fill btn-ghost h-11 min-w-32 px-6 text-sm"
+            onClick={() => {
+              playClick();
+              closeOverlay();
+            }}
+          >
+            Отмена
+          </button>
+        </ModalActions>
+      </Modal>
+    );
+  }
+
+  if (subModal === "sell-ask") {
+    return (
+      <Modal layer="sub">
+        <h2 className="text-center text-lg font-semibold">Продать авто?</h2>
+        <p className="mt-3 text-center text-sm leading-relaxed text-muted">
+          Вы точно хотите продать авто? Карточка удалится после итога.
+        </p>
+        <div className="mx-auto mt-5 w-full max-w-xs">
+          <span className="mb-1.5 block text-xs text-muted">За сколько продали</span>
+          <input
+            className="field"
+            autoFocus
+            inputMode="decimal"
+            placeholder="0"
+            value={draftSale}
+            onChange={(event) => setDraftSale(event.target.value)}
+          />
+          <p className="mt-2 text-right text-xs text-subtle">руб.</p>
+        </div>
+        <ModalActions>
+          <button
+            type="button"
+            className="btn-fill btn-green h-11 min-w-36 px-5 text-sm"
+            onClick={() => {
+              playClick();
+              confirmSell();
+            }}
+          >
+            Подтвердить
+          </button>
+          <button
+            type="button"
+            className="btn-fill btn-ghost h-11 min-w-32 px-5 text-sm"
+            onClick={() => {
+              playClick();
+              closeOverlay();
+            }}
+          >
+            Отмена
+          </button>
+        </ModalActions>
+      </Modal>
+    );
+  }
+
+  if (subModal === "sell-result") {
+    const loss = saleNet < 0;
+    return (
+      <Modal layer="sub" blur>
+        <h2 className={`text-center text-lg font-semibold ${loss ? "text-danger-hi" : "text-primary-hi"}`}>
+          {loss ? "Плохо" : "Хорошо"}
+        </h2>
+        <p className="mt-4 text-center text-sm leading-relaxed text-muted">
+          {loss
+            ? `Вы продали машину себе в минус на ${money(Math.abs(saleNet))}.`
+            : `Вы заработали с продажи этой машины ${money(saleNet)}.`}
+        </p>
+        <ModalActions>
+          <button
+            type="button"
+            className="btn-fill btn-green h-11 min-w-36 px-6 text-sm"
+            onClick={() => {
+              playClick();
+              acceptSell();
+            }}
+          >
+            Принять
+          </button>
+        </ModalActions>
+      </Modal>
+    );
+  }
+
   return null;
 }
 
 export function GarageOverlays() {
   const overlay = useGarage((s) => s.overlay);
   const subModal = useGarage((s) => s.subModal);
-  const wizardStep = useGarage((s) => s.wizardStep);
-  const draftName = useGarage((s) => s.draftName);
-  const draftPlate = useGarage((s) => s.draftPlate);
-  const draftRegion = useGarage((s) => s.draftRegion);
-  const draftImage = useGarage((s) => s.draftImage);
-  const draftPrice = useGarage((s) => s.draftPrice);
-  const draftScrap = useGarage((s) => s.draftScrap);
   const detailsId = useGarage((s) => s.detailsId);
   const deleteId = useGarage((s) => s.deleteId);
   const cars = useGarage((s) => s.cars);
   const pendingImport = useGarage((s) => s.pendingImport);
-  const setDraftName = useGarage((s) => s.setDraftName);
-  const setDraftPlate = useGarage((s) => s.setDraftPlate);
-  const setDraftRegion = useGarage((s) => s.setDraftRegion);
-  const setDraftImage = useGarage((s) => s.setDraftImage);
-  const setDraftPrice = useGarage((s) => s.setDraftPrice);
-  const setDraftScrap = useGarage((s) => s.setDraftScrap);
-  const wizardNext = useGarage((s) => s.wizardNext);
-  const wizardBack = useGarage((s) => s.wizardBack);
   const closeOverlay = useGarage((s) => s.closeOverlay);
   const confirmReset = useGarage((s) => s.confirmReset);
   const confirmDelete = useGarage((s) => s.confirmDelete);
   const confirmImport = useGarage((s) => s.confirmImport);
   const cancelImport = useGarage((s) => s.cancelImport);
-  const pushToast = useGarage((s) => s.pushToast);
-  const fileRef = useRef<HTMLInputElement>(null);
   const detailsCar = cars.find((car) => car.id === detailsId);
   const deleteCar = cars.find((car) => car.id === deleteId);
 
@@ -446,17 +834,6 @@ export function GarageOverlays() {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [overlay, subModal, closeOverlay]);
-
-  async function pickImage(file?: File) {
-    if (!file) return;
-    try {
-      const data = await readCarImage(file);
-      setDraftImage(data);
-      pushToast("Изображение выбрано", "info");
-    } catch {
-      pushToast("Не удалось прочитать файл", "error");
-    }
-  }
 
   return (
     <>
@@ -561,227 +938,9 @@ export function GarageOverlays() {
       {overlay === "rent" ? <RentOverlay /> : null}
       {subModal === "none" ? null : <SubModals />}
 
-      {overlay === "wizard" ? (
-        <Modal wide>
-          <p className="mb-3 text-center text-xs tracking-wide text-subtle tabular-nums">
-            Шаг {wizardStep} из 4
-          </p>
-          {wizardStep === 1 ? (
-            <>
-              <h2 className="text-center text-lg font-semibold">Введите название авто</h2>
-              <div className="mx-auto mt-6 w-full max-w-xs">
-                <input
-                  className="field"
-                  autoFocus
-                  placeholder="Например: Toyota Camry"
-                  value={draftName}
-                  onChange={(event) => setDraftName(event.target.value)}
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter") {
-                      playClick();
-                      wizardNext();
-                    }
-                  }}
-                />
-              </div>
-              <ModalActions>
-                <button
-                  type="button"
-                  className="btn-fill btn-green h-11 min-w-32 px-6 text-sm"
-                  onClick={() => {
-                    playClick();
-                    wizardNext();
-                  }}
-                >
-                  Далее
-                </button>
-                <button
-                  type="button"
-                  className="btn-fill btn-ghost h-11 min-w-32 px-6 text-sm"
-                  onClick={() => {
-                    playClick();
-                    closeOverlay();
-                  }}
-                >
-                  Отмена
-                </button>
-              </ModalActions>
-            </>
-          ) : null}
-          {wizardStep === 2 ? (
-            <>
-              <h2 className="text-center text-lg font-semibold">Госномер</h2>
-              <div className="mx-auto mt-6 flex w-full max-w-sm items-end justify-center gap-3">
-                <label className="block min-w-0 flex-1">
-                  <span className="mb-1.5 block text-xs text-muted">Номер</span>
-                  <input
-                    className="field font-semibold tracking-[0.18em]"
-                    autoFocus
-                    placeholder="А123АА"
-                    value={draftPlate}
-                    maxLength={6}
-                    onChange={(event) => setDraftPlate(sanitizePlate(event.target.value))}
-                    onKeyDown={(event) => {
-                      if (event.key === "Enter") {
-                        playClick();
-                        wizardNext();
-                      }
-                    }}
-                    aria-label="Госномер"
-                  />
-                </label>
-                <label className="block w-[4.75rem] shrink-0">
-                  <span className="mb-1.5 block text-xs text-muted">Регион</span>
-                  <input
-                    className="field px-2 text-center font-semibold tabular-nums"
-                    inputMode="numeric"
-                    placeholder="777"
-                    value={draftRegion}
-                    maxLength={3}
-                    onChange={(event) => setDraftRegion(sanitizeRegion(event.target.value))}
-                    onKeyDown={(event) => {
-                      if (event.key === "Enter") {
-                        playClick();
-                        wizardNext();
-                      }
-                    }}
-                    aria-label="Регион"
-                  />
-                </label>
-              </div>
-              <ModalActions>
-                <button
-                  type="button"
-                  className="btn-fill btn-green h-11 min-w-28 px-5 text-sm"
-                  onClick={() => {
-                    playClick();
-                    wizardNext();
-                  }}
-                >
-                  Далее
-                </button>
-                <button
-                  type="button"
-                  className="btn-fill btn-ghost h-11 min-w-28 px-5 text-sm"
-                  onClick={() => {
-                    playClick();
-                    wizardBack();
-                  }}
-                >
-                  Назад
-                </button>
-              </ModalActions>
-            </>
-          ) : null}
-          {wizardStep === 3 ? (
-            <>
-              <h2 className="text-center text-lg font-semibold">Выберите изображение для авто</h2>
-              <p className="mt-2 text-center text-xs text-muted">
-                Текущее: {draftImage ? "файл выбран" : "не выбрано"}
-              </p>
-              {draftImage ? (
-                <div className="mx-auto mt-4 h-28 w-full max-w-xs overflow-hidden bg-surface">
-                  <img src={draftImage} alt="" className="h-full w-full object-contain" />
-                </div>
-              ) : null}
-              <div className="mt-5 flex justify-center">
-                <input
-                  ref={fileRef}
-                  type="file"
-                  accept="image/png,image/jpeg,image/webp,image/bmp"
-                  className="hidden"
-                  onChange={(event) => {
-                    const file = event.target.files?.[0];
-                    event.target.value = "";
-                    void pickImage(file);
-                  }}
-                />
-                <button
-                  type="button"
-                  className="btn-fill btn-ghost h-11 min-w-40 px-6 text-sm"
-                  onClick={() => {
-                    playClick();
-                    fileRef.current?.click();
-                  }}
-                >
-                  Открыть файл
-                </button>
-              </div>
-              <ModalActions>
-                <button
-                  type="button"
-                  className="btn-fill btn-green h-11 min-w-28 px-5 text-sm"
-                  onClick={() => {
-                    playClick();
-                    wizardNext();
-                  }}
-                >
-                  Далее
-                </button>
-                <button
-                  type="button"
-                  className="btn-fill btn-ghost h-11 min-w-28 px-5 text-sm"
-                  onClick={() => {
-                    playClick();
-                    wizardBack();
-                  }}
-                >
-                  Назад
-                </button>
-              </ModalActions>
-            </>
-          ) : null}
-          {wizardStep === 4 ? (
-            <>
-              <h2 className="text-center text-lg font-semibold">Стоимость авто</h2>
-              <div className="mx-auto mt-6 w-full max-w-xs space-y-4">
-                <label className="block">
-                  <span className="mb-1.5 block text-xs text-muted">Цена</span>
-                  <input
-                    className="field"
-                    inputMode="decimal"
-                    placeholder="0"
-                    value={draftPrice}
-                    onChange={(event) => setDraftPrice(event.target.value)}
-                  />
-                </label>
-                <label className="block">
-                  <span className="mb-1.5 block text-xs text-muted">Слив по свалке</span>
-                  <input
-                    className="field"
-                    inputMode="decimal"
-                    placeholder="0"
-                    value={draftScrap}
-                    onChange={(event) => setDraftScrap(event.target.value)}
-                  />
-                </label>
-              </div>
-              <ModalActions>
-                <button
-                  type="button"
-                  className="btn-fill btn-green h-11 min-w-32 px-6 text-sm"
-                  onClick={() => {
-                    playClick();
-                    wizardNext();
-                  }}
-                >
-                  Готово
-                </button>
-                <button
-                  type="button"
-                  className="btn-fill btn-ghost h-11 min-w-32 px-6 text-sm"
-                  onClick={() => {
-                    playClick();
-                    wizardBack();
-                  }}
-                >
-                  Назад
-                </button>
-              </ModalActions>
-            </>
-          ) : null}
-        </Modal>
-      ) : null}
+      {overlay === "wizard" ? <WizardModal /> : null}
+      {overlay === "api" ? <ApiPanel /> : null}
+      {overlay === "market" ? <MarketPanel /> : null}
     </>
   );
 }
@@ -804,49 +963,3 @@ export function GarageToasts() {
     </div>
   );
 }
-
-const SPLASH_MS = 2400;
-const SPLASH_SWAP_MS = 1200;
-
-export function SplashScreen({ onDone }: { onDone: () => void }) {
-  const bootCheck = useGarage((s) => s.bootCheck);
-  const [phase, setPhase] = useState<"load" | "venom">("load");
-
-  useEffect(() => {
-    const finish = () => bootCheck();
-    const unsub = useGarage.persist.onFinishHydration(finish);
-    if (useGarage.persist.hasHydrated()) finish();
-    const swap = window.setInterval(() => {
-      setPhase((current) => (current === "load" ? "venom" : "load"));
-    }, SPLASH_SWAP_MS);
-    const done = window.setTimeout(() => onDone(), SPLASH_MS);
-    return () => {
-      unsub();
-      window.clearInterval(swap);
-      window.clearTimeout(done);
-    };
-  }, [bootCheck, onDone]);
-
-  return (
-    <div className="flex min-h-dvh flex-col items-center justify-center bg-bg">
-      <div className="splash-ring" aria-hidden="true" />
-      <div className="relative mt-8 h-8 w-72">
-        <p
-          className={`splash-copy absolute inset-0 text-center text-sm tracking-[0.28em] text-fg ${
-            phase === "load" ? "splash-in" : "splash-out"
-          }`}
-        >
-          Загрузка
-        </p>
-        <p
-          className={`splash-copy absolute inset-0 text-center text-sm tracking-[0.22em] text-fg ${
-            phase === "venom" ? "splash-in" : "splash-out"
-          }`}
-        >
-          Powered by Venom
-        </p>
-      </div>
-    </div>
-  );
-}
-

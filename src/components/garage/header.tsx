@@ -1,6 +1,7 @@
 import { useRef } from "react";
 import { Plus, RotateCcw, Search, Upload } from "lucide-react";
 import { CarGlyph } from "@/components/garage/icons";
+import { DarkRentLogo } from "@/components/garage/logo";
 import { exportGarageLog, parseBackupFile } from "@/lib/garage/backup";
 import { useGarage } from "@/lib/garage/store";
 import { playClick } from "@/lib/garage/utils";
@@ -18,8 +19,12 @@ export function GarageHeader() {
 
   const exportLog = () => {
     playClick();
+    if (!cars.length) {
+      pushToast("В базе нет автомобилей");
+      return;
+    }
     exportGarageLog(cars);
-    pushToast(cars.length ? "Лог выгружен" : "В базе нет автомобилей");
+    pushToast("Лог выгружен");
   };
 
   const pickImport = () => {
@@ -28,7 +33,7 @@ export function GarageHeader() {
   };
 
   return (
-    <header className="shrink-0 border-b border-line">
+    <header className="garage-header relative z-10 shrink-0">
       <input
         ref={fileRef}
         type="file"
@@ -48,9 +53,12 @@ export function GarageHeader() {
       />
       <div className="relative flex flex-col gap-3 px-4 pt-3 pb-3 md:flex-row md:items-center md:gap-4 md:px-5">
         <div className="flex items-center justify-between gap-3 md:contents">
-          <div className="flex shrink-0 items-center gap-2 text-sm text-muted">
-            <span className="tabular-nums">Автомобилей: {count}</span>
-            <span className="inline-block size-2 rounded-full bg-primary-hi" title="База онлайн" />
+          <div className="flex shrink-0 items-center gap-4">
+            <DarkRentLogo size="sm" />
+            <div className="flex items-center gap-2 text-sm text-muted">
+              <span className="tabular-nums">Автомобилей: {count}</span>
+              <span className="inline-block size-2 rounded-full bg-primary-hi" title="База онлайн" />
+            </div>
           </div>
           <div className="flex shrink-0 items-center gap-3 md:hidden">
             <button
@@ -82,7 +90,7 @@ export function GarageHeader() {
             </button>
           </div>
         </div>
-        <label className="relative hidden min-w-0 w-full sm:block md:w-56 md:shrink-0">
+        <label className="relative hidden min-w-0 w-full sm:block md:ml-2 md:w-52 md:shrink-0">
           <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-subtle" />
           <input
             className="field h-10 pl-9"
@@ -147,6 +155,7 @@ export function GarageHeader() {
           />
         </label>
       </div>
+      <div className="header-pulse-line" aria-hidden="true" />
     </header>
   );
 }

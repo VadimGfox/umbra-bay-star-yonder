@@ -159,6 +159,18 @@ export function formatPlate(plate: string, region: string) {
   return region ? `${plate}  ${region}` : plate;
 }
 
+export function splitPlate(plate: string) {
+  const match = plate.match(new RegExp(`^([${PLATE_LETTERS}])(\\d{3})([${PLATE_LETTERS}]{2})$`));
+  if (match) {
+    return { letter: match[1] ?? "", digits: match[2] ?? "", letters: match[3] ?? "" };
+  }
+  return {
+    letter: plate.slice(0, 1),
+    digits: plate.slice(1, 4),
+    letters: plate.slice(4, 6),
+  };
+}
+
 export function newId() {
   return crypto.randomUUID();
 }
@@ -226,9 +238,21 @@ export function playClick() {
   }
 }
 
+function asLogs(value: unknown): RentLog[] {
+  if (!Array.isArray(value)) return [];
+  return value.flatMap((row) => {
+    const log = asLog(row);
+    return log ? [log] : [];
+  });
+}
+
 export function refreshCarPeriod(car: Car, date = new Date()): Car {
   const keys = periodKeys(date);
-  const next: Car = { ...car, logs: Array.isArray(car.logs) ? car.logs : [] };
+  const next: Car = {
+    ...car,
+    logs: Array.isArray(car.logs) ? car.logs : [],
+    monthLogs: Array.isArray(car.monthLogs) ? car.monthLogs : [],
+  };
   if (car.todayKey !== keys.todayKey) {
     next.earnedToday = 0;
     next.todayKey = keys.todayKey;
@@ -240,6 +264,7 @@ export function refreshCarPeriod(car: Car, date = new Date()): Car {
   }
   if (car.monthKey !== keys.monthKey) {
     next.earnedMonth = 0;
+    next.monthLogs = [];
     next.monthKey = keys.monthKey;
   }
   return next;
@@ -270,10 +295,9 @@ export function normalizeCar(raw: unknown): Car | null {
   const e = raw as Record<string, unknown>;
   if (!e.id || !e.name) return null;
   const keys = periodKeys();
-  const logs = Array.isArray(e.logs) ? e.logs.flatMap((row) => {
-    const log = asLog(row);
-    return log ? [log] : [];
-  }) : [];
+  const logs = asLogs(e.logs);
+  const monthLogs = asLogs(e.monthLogs);
+  const createdAt = asNumber(e.createdAt, Date.now());
   const car: Car = {
     ...e,
     id: String(e.id),
@@ -288,6 +312,10 @@ export function normalizeCar(raw: unknown): Car | null {
         ? e.officialPrice
         : null,
     expenses: asNumber(e.expenses),
+    repairs: asNumber(e.repairs),
+    hourlyRate:
+      typeof e.hourlyRate === "number" && Number.isFinite(e.hourlyRate) ? e.hourlyRate : null,
+    dailyRate: typeof e.dailyRate === "number" && Number.isFinite(e.dailyRate) ? e.dailyRate : null,
     hours: asNumber(e.hours),
     earnedToday: asNumber(e.earnedToday),
     earnedWeek: asNumber(e.earnedWeek),
@@ -297,25 +325,71 @@ export function normalizeCar(raw: unknown): Car | null {
     weekKey: typeof e.weekKey === "string" ? e.weekKey : keys.weekKey,
     monthKey: typeof e.monthKey === "string" ? e.monthKey : keys.monthKey,
     logs,
-    createdAt: asNumber(e.createdAt, Date.now()),
+    monthLogs: monthLogs.length ? monthLogs : logs,
+    createdAt,
+    ownedFrom: asNumber(e.ownedFrom, createdAt),
   };
   return refreshCarPeriod(car);
 }
 
+export function repairsOf(car: Car) {
+  return Number.isFinite(car.repairs) ? Math.max(0, car.repairs) : 0;
+}
+
+/** What still has to be earned back: purchase + repairs − scrap. */
+export function obligation(car: Car) {
+  return car.price + repairsOf(car) - car.scrapPrice;
+}
+
 export function paybackRatio(car: Car) {
-  return car.scrapPrice <= 0
-    ? 0
-    : Math.max(0, Math.min(1, car.earnedTotal / car.scrapPrice));
+  return car.scrapPrice <= 0 ? 0 : Math.max(0, Math.min(1, car.earnedTotal / car.scrapPrice));
 }
 
 export function leftover(car: Car) {
-  return Math.max(0, car.price - car.scrapPrice - car.earnedTotal);
+  return Math.max(0, obligation(car) - car.earnedTotal);
+}
+
+export function surplus(car: Car) {
+  const base = obligation(car);
+  if (base <= 0) return Math.max(0, car.earnedTotal);
+  return Math.max(0, car.earnedTotal - base);
 }
 
 export function paybackPercent(car: Car) {
-  const base = car.price - car.scrapPrice;
+  const base = obligation(car);
   if (base <= 0) return car.earnedTotal > 0 ? 100 : 0;
   return Math.max(0, Math.min(100, (car.earnedTotal / base) * 100));
+}
+
+export function sellOutcome(car: Car, salePrice: number) {
+  const net = salePrice + car.earnedTotal - car.price - repairsOf(car);
+  return { net, loss: net < 0 };
+}
+
+export function compactMoney(value: number) {
+  const n = Math.round(Number.isFinite(value) ? value : 0);
+  if (Math.abs(n) >= 1_000_000) {
+    const m = n / 1_000_000;
+    const text = Math.abs(m) >= 10 ? String(Math.round(m)) : trimNum(m);
+    return `${text} млн`;
+  }
+  if (Math.abs(n) >= 10_000) return `${trimNum(n / 1000)}т`;
+  return new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 0 }).format(n);
+}
+
+function trimNum(value: number) {
+  const rounded = Math.round(value * 10) / 10;
+  return String(rounded).replace(".", ",");
+}
+
+export function rateChip(amount: number, unit: "час" | "день") {
+  return `${compactMoney(amount)} ₽ / ${unit}`;
+}
+
+export function tariffQuote(car: Car, kind: "hourly" | "daily", duration: number) {
+  const rate = kind === "daily" ? car.dailyRate : car.hourlyRate;
+  if (rate == null || !Number.isFinite(rate)) return null;
+  return Math.round(rate * duration);
 }
 
 export function reached(earned: number, target: number | null) {
@@ -331,3 +405,182 @@ export function filterCars(cars: Car[], query: string) {
     return car.name.toLowerCase().includes(q) || plate.includes(compact);
   });
 }
+
+export function dateKeyToMs(dateKey: string) {
+  const [year, month, day] = dateKey.split("-").map(Number);
+  return Date.UTC(year || 1970, (month || 1) - 1, day || 1);
+}
+
+export function daysOwned(car: Car, date = new Date()) {
+  const from = Number.isFinite(car.ownedFrom) ? car.ownedFrom : car.createdAt;
+  const fromKey = moscowParts(new Date(from)).dateKey;
+  const nowKey = moscowParts(date).dateKey;
+  const diff = Math.floor((dateKeyToMs(nowKey) - dateKeyToMs(fromKey)) / 864e5);
+  return Math.max(1, diff + 1);
+}
+
+export function ownedFromForDays(days: number, date = new Date()) {
+  const n = Math.max(1, Math.floor(days));
+  const nowKey = moscowParts(date).dateKey;
+  return dateKeyToMs(nowKey) - (n - 1) * 864e5;
+}
+
+export function daysWord(n: number) {
+  const abs = Math.abs(n) % 100;
+  const d = abs % 10;
+  if (abs > 10 && abs < 20) return "дней";
+  if (d === 1) return "день";
+  if (d >= 2 && d <= 4) return "дня";
+  return "дней";
+}
+
+export function uniqueLogs(car: Car): RentLog[] {
+  const seen = new Set<string>();
+  const out: RentLog[] = [];
+  for (const row of [...(car.monthLogs ?? []), ...(car.logs ?? [])]) {
+    if (seen.has(row.id)) continue;
+    seen.add(row.id);
+    out.push(row);
+  }
+  return out;
+}
+
+export function latestRent(car: Car): RentLog | null {
+  const all = uniqueLogs(car);
+  if (!all.length) return null;
+  return all.reduce((best, row) => (row.at > best.at ? row : best));
+}
+
+export function applyUndoLastRent(car: Car, date = new Date()): { car: Car; undone: RentLog | null } {
+  const log = latestRent(car);
+  if (!log) return { car, undone: null };
+  const keys = periodKeys(date);
+  const logKeys = periodKeys(new Date(log.at));
+  return {
+    undone: log,
+    car: {
+      ...car,
+      hours: Math.max(0, car.hours - log.hours),
+      earnedToday:
+        logKeys.todayKey === keys.todayKey ? Math.max(0, car.earnedToday - log.amount) : car.earnedToday,
+      earnedWeek:
+        logKeys.weekKey === keys.weekKey ? Math.max(0, car.earnedWeek - log.amount) : car.earnedWeek,
+      earnedMonth:
+        logKeys.monthKey === keys.monthKey ? Math.max(0, car.earnedMonth - log.amount) : car.earnedMonth,
+      earnedTotal: Math.max(0, car.earnedTotal - log.amount),
+      logs: car.logs.filter((row) => row.id !== log.id),
+      monthLogs: (car.monthLogs ?? []).filter((row) => row.id !== log.id),
+    },
+  };
+}
+
+export function applyExpenseDelta(car: Car, amount: number, sign: 1 | -1): Car {
+  const delta = amount * sign;
+  return {
+    ...car,
+    expenses: Math.max(0, car.expenses + delta),
+    price: Math.max(0, car.price + delta),
+  };
+}
+
+export function applyRepairDelta(car: Car, amount: number, sign: 1 | -1): Car {
+  return {
+    ...car,
+    repairs: Math.max(0, repairsOf(car) + amount * sign),
+  };
+}
+
+export type RatingKey = "excellent" | "popular" | "average" | "terrible";
+
+export type RatingRow = {
+  key: RatingKey;
+  label: string;
+  color: string;
+  score: number;
+};
+
+export function ratingModel(car: Car) {
+  const t = paybackRatio(car);
+  const n = paybackPercent(car) / 100;
+  const rest = leftover(car);
+  const expenseShare = car.price > 0 ? Math.min(1, car.expenses / Math.max(car.price, 1)) : 0;
+  const trips = typeof car.trips === "number" ? Number(car.trips) : uniqueLogs(car).length;
+  const logCount = uniqueLogs(car).length;
+  const hours = car.hours;
+  const excellent = Math.max(
+    0,
+    Math.min(1, t * 0.55 + n * 0.35 + (car.earnedTotal > 0 ? 0.1 : 0) - expenseShare * 0.25),
+  );
+  const popular = Math.max(
+    0,
+    Math.min(1, Math.min(1, trips / 12) * 0.45 + Math.min(1, logCount / 5) * 0.35 + Math.min(1, hours / 80) * 0.2),
+  );
+  const terrible = Math.max(
+    0,
+    Math.min(
+      1,
+      (1 - t) * 0.35 +
+        expenseShare * 0.3 +
+        (car.price > 0 ? Math.min(1, rest / car.price) * 0.25 : 0.2) +
+        (car.earnedTotal <= 0 && trips === 0 ? 0.2 : 0),
+    ),
+  );
+  const average = Math.max(0, Math.min(1, 1 - Math.abs(0.45 - t) * 1.2 - Math.abs(0.35 - popular) * 0.4));
+  const ratings: RatingRow[] = [
+    { key: "excellent", label: "Отличная", color: "#3cb85c", score: excellent },
+    { key: "popular", label: "Популярная", color: "#5aa0d6", score: popular },
+    { key: "average", label: "Средняя", color: "#c4c4cc", score: average },
+    { key: "terrible", label: "Ужасная", color: "#e04444", score: terrible },
+  ];
+  return { ratings, active: ratings.reduce((a, b) => (b.score > a.score ? b : a)) };
+}
+
+export const RATING_HINT: Record<RatingKey, string> = {
+  excellent: "Машина закрывает вложения быстро — держать и крутить.",
+  popular: "Парк её разбирает. Спрос держится, простои короткие.",
+  average: "Рабочая лошадка без перекоса: ни простоя, ни ажиотажа.",
+  terrible: "Слабая отдача и долгий простой. Имеет смысл пересмотреть цену или продать.",
+};
+
+export function popularityScore(car: Car, date = new Date()) {
+  const now = date.getTime();
+  const weekAgo = now - 7 * 864e5;
+  const recent = uniqueLogs(car).filter((row) => row.at >= weekAgo);
+  const trips = recent.length;
+  const hours = recent.reduce((sum, row) => sum + row.hours, 0);
+  const last = recent.reduce((best, row) => (row.at > best ? row.at : best), 0);
+  const recency = last ? Math.max(0, 1 - (now - last) / (5 * 864e5)) : 0;
+  const tripScore = Math.min(1, trips / 9);
+  const hourScore = Math.min(1, hours / 36);
+  return Math.max(0, Math.min(1, tripScore * 0.5 + hourScore * 0.35 + recency * 0.15));
+}
+
+export function popularityMeta(score: number) {
+  if (score < 0.18) return { label: "Непопулярная", hint: "Редко уходит. Спрос почти стоит." };
+  if (score < 0.38) return { label: "Слабый спрос", hint: "Берут нерегулярно — шкала ещё холодная." };
+  if (score < 0.58) return { label: "Рабочий ритм", hint: "Стабильные выезды без перегрева." };
+  if (score < 0.8) return { label: "Высокий спрос", hint: "Часто в аренде, простои короткие." };
+  return { label: "Пик популярности", hint: "Машину разбирают. Это верх шкалы." };
+}
+
+export function popularityColor(score: number) {
+  const stops: Array<[number, [number, number, number]]> = [
+    [0, [90, 12, 12]],
+    [0.22, [196, 43, 43]],
+    [0.42, [214, 96, 28]],
+    [0.62, [214, 176, 48]],
+    [0.82, [96, 176, 72]],
+    [1, [44, 168, 78]],
+  ];
+  const t = Math.max(0, Math.min(1, score));
+  let i = 0;
+  while (i < stops.length - 1 && t > stops[i + 1]![0]) i += 1;
+  const a = stops[i]!;
+  const b = stops[Math.min(i + 1, stops.length - 1)]!;
+  const span = b[0] - a[0] || 1;
+  const u = (t - a[0]) / span;
+  const rgb = a[1].map((ch, idx) => Math.round(ch + (b[1][idx]! - ch) * u));
+  return `rgb(${rgb[0]} ${rgb[1]} ${rgb[2]})`;
+}
+
+export const MEDIAN_MIN_DAYS = 7;
