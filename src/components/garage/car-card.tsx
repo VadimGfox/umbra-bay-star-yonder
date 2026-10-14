@@ -1,8 +1,8 @@
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { Clock } from "lucide-react";
 import type { Car } from "@/lib/garage/types";
 import { useGarage } from "@/lib/garage/store";
-import { formatPlate, hoursLabel, playClick } from "@/lib/garage/utils";
+import { formatPlate, hoursLabel, playClick, qualityTier } from "@/lib/garage/utils";
 
 export function CarCard({ car }: { car: Car }) {
   const openRent = useGarage((s) => s.openRent);
@@ -10,6 +10,8 @@ export function CarCard({ car }: { car: Car }) {
   const openDetails = useGarage((s) => s.openDetails);
   const plate = formatPlate(car.plate, car.region);
   const ref = useRef<HTMLElement>(null);
+  const [shine, setShine] = useState(0);
+  const tier = qualityTier(car.officialPrice);
 
   const tilt = (event: React.MouseEvent<HTMLElement>) => {
     const el = ref.current;
@@ -31,13 +33,22 @@ export function CarCard({ car }: { car: Car }) {
   return (
     <article
       ref={ref}
-      className="car-tilt flex w-44 shrink-0 flex-col overflow-hidden bg-surface shadow-[var(--shadow-border)] md:w-48"
+      className="car-tilt relative flex w-44 shrink-0 flex-col overflow-hidden bg-surface shadow-[var(--shadow-border)] md:w-48"
       onMouseMove={tilt}
+      onMouseEnter={() => setShine((n) => n + 1)}
       onMouseLeave={rest}
     >
-      <div className="flex items-center gap-1 px-2.5 py-1.5 text-xs text-muted">
-        <Clock className="size-3" />
-        <span className="tabular-nums">{hoursLabel(car.hours)}</span>
+      {shine > 0 ? <span key={shine} className="card-shine" aria-hidden="true" /> : null}
+      <div className="relative z-[1] flex items-center justify-between gap-1 px-2.5 py-1.5 text-xs text-muted">
+        <span className="inline-flex items-center gap-1">
+          <Clock className="size-3" />
+          <span className="tabular-nums">{hoursLabel(car.hours)}</span>
+        </span>
+        <span
+          className="quality-pip"
+          style={{ background: tier.color, boxShadow: `0 0 8px ${tier.color}` }}
+          title={tier.label}
+        />
       </div>
       <div className="h-28 bg-surface md:h-32">
         {car.imageData ? (

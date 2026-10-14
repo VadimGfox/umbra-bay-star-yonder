@@ -302,6 +302,7 @@ export function normalizeCar(raw: unknown): Car | null {
     ...e,
     id: String(e.id),
     name: String(e.name),
+    model: typeof e.model === "string" ? e.model : "",
     plate: typeof e.plate === "string" ? e.plate : "",
     region: typeof e.region === "string" ? e.region : "",
     imageData: typeof e.imageData === "string" ? e.imageData : null,
@@ -330,6 +331,16 @@ export function normalizeCar(raw: unknown): Car | null {
     ownedFrom: asNumber(e.ownedFrom, createdAt),
   };
   return refreshCarPeriod(car);
+}
+
+export function qualityTier(official: number | null) {
+  const n = official == null || !Number.isFinite(official) ? 0 : official;
+  if (n > 10_000_000) return { color: "#7dffe8", label: "свыше 10 млн" };
+  if (n > 5_000_000) return { color: "#e2c15a", label: "до 10 млн" };
+  if (n > 2_500_000) return { color: "#e24b4b", label: "до 5 млн" };
+  if (n > 1_000_000) return { color: "#5c2d82", label: "до 2,5 млн" };
+  if (n > 500_000) return { color: "#8fd4ff", label: "до 1 млн" };
+  return { color: "#8d8d98", label: "до 500 тыс" };
 }
 
 export function repairsOf(car: Car) {

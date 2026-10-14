@@ -9,12 +9,14 @@ import { money, playClick, sanitizePlate, sanitizeRegion } from "@/lib/garage/ut
 
 function Modal({
   children,
+  title,
   wide,
   roomy,
   layer,
   blur,
 }: {
   children: ReactNode;
+  title?: string;
   wide?: boolean;
   roomy?: boolean;
   layer?: "sub" | "main";
@@ -27,8 +29,14 @@ function Modal({
         layer === "sub" ? "z-50" : "z-40"
       } ${blur ? "backdrop-blurred" : "backdrop-plain"}`}
     >
-      <div className={`modal-enter w-full bg-elevated px-8 py-8 ${width}`} role="dialog" aria-modal="true">
-        {children}
+      <div className={`modal-enter w-full overflow-hidden bg-elevated ${width}`} role="dialog" aria-modal="true">
+        {title ? (
+          <div className="pop-head">
+            <p>{title}</p>
+            <div className="header-pulse-line" />
+          </div>
+        ) : null}
+        <div className="px-8 py-7">{children}</div>
       </div>
     </div>
   );
@@ -52,8 +60,7 @@ function RentOverlay() {
 
   if (rentStep === "pick") {
     return (
-      <Modal wide blur>
-        <h2 className="text-center text-lg font-semibold">Сдать в аренду</h2>
+      <Modal wide blur title="Сдать в аренду">
         <div className="mt-8 flex flex-col gap-3 sm:flex-row">
           <button
             type="button"
@@ -99,10 +106,7 @@ function RentOverlay() {
     const count = daily ? 7 : 24;
     const pick = useGarage.getState().pickRentDuration;
     return (
-      <Modal roomy blur>
-        <h2 className="text-center text-lg font-semibold">
-          {daily ? "На сколько суток ушла машина?" : "На сколько часов ушла машина?"}
-        </h2>
+      <Modal roomy blur title={daily ? "На сколько суток ушла машина?" : "На сколько часов ушла машина?"}>
         <div className={`mx-auto mt-6 grid w-full gap-1.5 ${daily ? "max-w-md grid-cols-7" : "grid-cols-6"}`}>
           {Array.from({ length: count }, (_, i) => i + 1).map((n) => (
             <button
@@ -135,8 +139,7 @@ function RentOverlay() {
   }
 
   return (
-    <Modal blur>
-      <h2 className="text-center text-lg font-semibold">За сколько ушла машина?</h2>
+    <Modal blur title="За сколько ушла машина?">
       <div className="mx-auto mt-6 w-full max-w-xs">
         <div className="relative">
           <input
@@ -222,6 +225,9 @@ function SubModals() {
   const saveOwnedDays = useGarage((s) => s.saveOwnedDays);
   const confirmUndoRent = useGarage((s) => s.confirmUndoRent);
   const savePlate = useGarage((s) => s.savePlate);
+  const draftModel = useGarage((s) => s.draftModel);
+  const setDraftModel = useGarage((s) => s.setDraftModel);
+  const saveModel = useGarage((s) => s.saveModel);
   const draftPlate = useGarage((s) => s.draftPlate);
   const draftRegion = useGarage((s) => s.draftRegion);
   const setDraftPlate = useGarage((s) => s.setDraftPlate);
@@ -242,8 +248,7 @@ function SubModals() {
 
   if (subModal === "official") {
     return (
-      <Modal layer="sub">
-        <h2 className="text-center text-lg font-semibold">Введите госстоимость</h2>
+      <Modal layer="sub" title="Введите госстоимость">
         <div className="mx-auto mt-6 w-full max-w-xs">
           <input
             className="field"
@@ -298,8 +303,7 @@ function SubModals() {
         ? "Убавить расходы"
         : "Добавить расходы";
     return (
-      <Modal layer="sub">
-        <h2 className="text-center text-lg font-semibold">{title}</h2>
+      <Modal layer="sub" title={title}>
         <div className="mx-auto mt-6 w-full max-w-xs">
           <input
             className="field"
@@ -345,8 +349,7 @@ function SubModals() {
 
   if (subModal === "edit-earn") {
     return (
-      <Modal layer="sub" wide>
-        <h2 className="text-center text-lg font-semibold">Редактировать</h2>
+      <Modal layer="sub" wide title="Редактировать">
         <div className="mx-auto mt-6 w-full max-w-xs space-y-3">
           <label className="block">
             <span className="mb-1.5 block text-xs text-muted">Сегодня</span>
@@ -413,8 +416,7 @@ function SubModals() {
 
   if (subModal === "rename") {
     return (
-      <Modal layer="sub">
-        <h2 className="text-center text-lg font-semibold">Название авто</h2>
+      <Modal layer="sub" title="Название авто">
         <div className="mx-auto mt-6 w-full max-w-xs">
           <input
             className="field"
@@ -457,8 +459,7 @@ function SubModals() {
 
   if (subModal === "owned-days") {
     return (
-      <Modal layer="sub">
-        <h2 className="text-center text-lg font-semibold">Дней во владении</h2>
+      <Modal layer="sub" title="Дней во владении">
         <div className="mx-auto mt-6 w-full max-w-xs">
           <input
             className="field"
@@ -502,8 +503,7 @@ function SubModals() {
 
   if (subModal === "undo-rent") {
     return (
-      <Modal layer="sub">
-        <h2 className="text-center text-lg font-semibold">Отменить последнюю аренду?</h2>
+      <Modal layer="sub" title="Отменить последнюю аренду?">
         <p className="mt-3 text-center text-sm leading-relaxed text-muted">
           Вы точно хотите отменить последнюю аренду? Сумма и запись исчезнут из логов.
         </p>
@@ -535,8 +535,7 @@ function SubModals() {
 
   if (subModal === "clear-log") {
     return (
-      <Modal layer="sub">
-        <h2 className="text-center text-lg font-semibold">Очистить лог?</h2>
+      <Modal layer="sub" title="Очистить лог?">
         <p className="mt-3 text-center text-sm leading-relaxed text-muted">
           {logRange === "month"
             ? "Вы уверены, что хотите очистить лог за месяц?"
@@ -570,8 +569,7 @@ function SubModals() {
 
   if (subModal === "plate") {
     return (
-      <Modal layer="sub" wide>
-        <h2 className="text-center text-lg font-semibold">Госномер</h2>
+      <Modal layer="sub" wide title="Госномер">
         <div className="mx-auto mt-6 flex w-full max-w-sm items-end justify-center gap-3">
           <label className="block min-w-0 flex-1">
             <span className="mb-1.5 block text-xs text-muted">Номер</span>
@@ -624,12 +622,58 @@ function SubModals() {
     );
   }
 
+  if (subModal === "model") {
+    return (
+      <Modal layer="sub" title="Модель" wide>
+        <p className="text-center text-xs leading-relaxed text-muted">
+          Игровое имя модели для рынка, например sultan2. По нему ищется позиция в API.
+        </p>
+        <div className="mx-auto mt-5 w-full max-w-xs">
+          <input
+            className="field"
+            autoFocus
+            placeholder="sultan2"
+            value={draftModel}
+            onChange={(event) => setDraftModel(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") {
+                playClick();
+                saveModel();
+              }
+            }}
+          />
+        </div>
+        <ModalActions>
+          <button
+            type="button"
+            className="btn-fill btn-green h-11 min-w-32 px-6 text-sm"
+            onClick={() => {
+              playClick();
+              saveModel();
+            }}
+          >
+            Сохранить
+          </button>
+          <button
+            type="button"
+            className="btn-fill btn-ghost h-11 min-w-32 px-6 text-sm"
+            onClick={() => {
+              playClick();
+              closeOverlay();
+            }}
+          >
+            Отмена
+          </button>
+        </ModalActions>
+      </Modal>
+    );
+  }
+
   if (subModal === "tariff") {
     const hourly = car?.hourlyRate;
     const daily = car?.dailyRate;
     return (
-      <Modal layer="sub" wide>
-        <h2 className="text-center text-lg font-semibold">Тариф</h2>
+      <Modal layer="sub" wide title="Тариф">
         <div className="mt-6 space-y-3">
           <div className="flex items-center justify-between gap-3 border border-line px-4 py-3">
             <div>
@@ -687,8 +731,7 @@ function SubModals() {
   if (subModal === "tariff-edit") {
     const daily = tariffKind === "daily";
     return (
-      <Modal layer="sub">
-        <h2 className="text-center text-lg font-semibold">{daily ? "Суточный тариф" : "Часовой тариф"}</h2>
+      <Modal layer="sub" title={daily ? "Суточный тариф" : "Часовой тариф"}>
         <div className="mx-auto mt-6 w-full max-w-xs">
           <input
             className="field"
@@ -734,8 +777,7 @@ function SubModals() {
 
   if (subModal === "sell-ask") {
     return (
-      <Modal layer="sub">
-        <h2 className="text-center text-lg font-semibold">Продать авто?</h2>
+      <Modal layer="sub" title="Продать авто?">
         <p className="mt-3 text-center text-sm leading-relaxed text-muted">
           Вы точно хотите продать авто? Карточка удалится после итога.
         </p>
@@ -780,10 +822,7 @@ function SubModals() {
   if (subModal === "sell-result") {
     const loss = saleNet < 0;
     return (
-      <Modal layer="sub" blur>
-        <h2 className={`text-center text-lg font-semibold ${loss ? "text-danger-hi" : "text-primary-hi"}`}>
-          {loss ? "Плохо" : "Хорошо"}
-        </h2>
+      <Modal layer="sub" blur title={loss ? "Плохо" : "Хорошо"}>
         <p className="mt-4 text-center text-sm leading-relaxed text-muted">
           {loss
             ? `Вы продали машину себе в минус на ${money(Math.abs(saleNet))}.`
@@ -838,8 +877,7 @@ export function GarageOverlays() {
   return (
     <>
       {overlay === "reset" ? (
-        <Modal>
-          <h2 className="text-center text-lg font-semibold">Сбросить весь учёт?</h2>
+        <Modal title="Сбросить весь учёт?">
           <p className="mt-3 text-center text-sm leading-relaxed text-muted">
             Все автомобили будут удалены безвозвратно.
             <br />
@@ -871,8 +909,7 @@ export function GarageOverlays() {
       ) : null}
 
       {overlay === "import-confirm" && pendingImport ? (
-        <Modal wide>
-          <h2 className="text-center text-lg font-semibold">Загрузить автомобили?</h2>
+        <Modal wide title="Загрузить автомобили?">
           <p className="mt-3 text-center text-sm leading-relaxed text-muted">
             Текущие карточки будут заменены данными из файла.
             <br />
@@ -904,8 +941,7 @@ export function GarageOverlays() {
       ) : null}
 
       {overlay === "delete" && deleteCar ? (
-        <Modal>
-          <h2 className="text-center text-lg font-semibold">Удалить автомобиль?</h2>
+        <Modal title="Удалить автомобиль?">
           <p className="mt-3 text-center text-sm leading-relaxed text-muted">
             «{deleteCar.name}» будет удалён безвозвратно.
           </p>
@@ -940,7 +976,9 @@ export function GarageOverlays() {
 
       {overlay === "wizard" ? <WizardModal /> : null}
       {overlay === "api" ? <ApiPanel /> : null}
-      {overlay === "market" ? <MarketPanel /> : null}
+      {overlay === "market" && detailsCar ? (
+        <MarketPanel carName={detailsCar.name} model={detailsCar.model || ""} />
+      ) : null}
     </>
   );
 }

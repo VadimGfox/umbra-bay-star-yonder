@@ -30,6 +30,7 @@ export type SubModal =
   | "owned-days"
   | "undo-rent"
   | "plate"
+  | "model"
   | "tariff"
   | "tariff-edit"
   | "sell-ask"
@@ -52,6 +53,7 @@ export type RentLog = {
 export type Car = {
   id: string;
   name: string;
+  model: string;
   plate: string;
   region: string;
   imageData: string | null;

@@ -106,6 +106,7 @@ type GarageState = {
   draftEarnMonth: string;
   draftEarnTotal: string;
   draftCarName: string;
+  draftModel: string;
   draftOwnedDays: string;
   logRange: LogRange;
   pendingImport: Car[] | null;
@@ -150,6 +151,9 @@ type GarageState = {
   openRepairSub: () => void;
   openPlate: () => void;
   savePlate: () => boolean;
+  openModel: () => void;
+  setDraftModel: (value: string) => void;
+  saveModel: () => boolean;
   openTariff: () => void;
   openTariffEdit: (kind: RentKind, scope: TariffScope) => void;
   setTariffDraft: (value: string) => void;
@@ -233,6 +237,7 @@ export const useGarage = create<GarageState>()(
       draftEarnMonth: "",
       draftEarnTotal: "",
       draftCarName: "",
+      draftModel: "",
       draftOwnedDays: "",
       logRange: "week",
       pendingImport: null,
@@ -390,6 +395,7 @@ export const useGarage = create<GarageState>()(
             {
               id: newId(),
               name,
+              model: "",
               plate: s.draftPlate,
               region: s.draftRegion,
               imageData: s.draftImage,
@@ -752,6 +758,23 @@ export const useGarage = create<GarageState>()(
           subModal: "none",
         });
         get().pushToast("Госномер обновлён", "info");
+        return true;
+      },
+      openModel: () => {
+        const s = get();
+        const car = s.cars.find((row) => row.id === s.detailsId);
+        set({ subModal: "model", draftModel: car?.model ?? "" });
+      },
+      setDraftModel: (draftModel) => set({ draftModel }),
+      saveModel: () => {
+        const id = get().detailsId;
+        if (!id) return false;
+        const model = get().draftModel.trim();
+        set({
+          cars: patchCar(get().cars, id, (car) => ({ ...car, model })),
+          subModal: "none",
+        });
+        get().pushToast(model ? "Модель сохранена" : "Модель очищена", "info");
         return true;
       },
       openTariff: () => set({ subModal: "tariff" }),

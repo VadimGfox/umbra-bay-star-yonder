@@ -16,6 +16,7 @@ import {
   paybackPercent,
   percent,
   playClick,
+  qualityTier,
   reached,
   readCarImage,
   surplus,
@@ -153,6 +154,17 @@ function WideButton({
   );
 }
 
+function QualityMark({ car, className }: { car: Car; className?: string }) {
+  const tier = qualityTier(car.officialPrice);
+  return (
+    <span
+      className={`quality-pip ${className ?? ""}`}
+      style={{ background: tier.color, boxShadow: `0 0 10px ${tier.color}` }}
+      title={tier.label}
+    />
+  );
+}
+
 export function DetailsOverlay({ car }: { car: Car }) {
   const closeOverlay = useGarage((s) => s.closeOverlay);
   const refreshCar = useGarage((s) => s.refreshCar);
@@ -163,6 +175,7 @@ export function DetailsOverlay({ car }: { car: Car }) {
   const openRepairSub = useGarage((s) => s.openRepairSub);
   const openTariff = useGarage((s) => s.openTariff);
   const openPlate = useGarage((s) => s.openPlate);
+  const openModel = useGarage((s) => s.openModel);
   const openMarket = useGarage((s) => s.openMarket);
   const openSell = useGarage((s) => s.openSell);
   const openEditEarn = useGarage((s) => s.openEditEarn);
@@ -252,7 +265,7 @@ export function DetailsOverlay({ car }: { car: Car }) {
               }
             }}
           />
-          <div className="mb-3 h-36 bg-surface">
+          <div className="photo-stage mb-3 h-36">
             {car.imageData ? (
               <img src={car.imageData} alt="" className="h-full w-full object-contain" />
             ) : (
@@ -268,11 +281,24 @@ export function DetailsOverlay({ car }: { car: Car }) {
                 <span className="text-xs tracking-wide text-fg opacity-25">Добавить изображение</span>
               </button>
             )}
+            <div className="photo-rgb" aria-hidden="true" />
+            <QualityMark car={car} className="absolute top-2 left-2 z-[3]" />
           </div>
-          <div className="flex items-baseline justify-center gap-2">
+          <div className="flex items-center justify-center gap-2">
             <h3 className="text-center text-base font-semibold">{car.name}</h3>
             <TextAction onClick={openRename}>Изменить</TextAction>
+            <button
+              type="button"
+              className="btn-fill btn-ghost h-8 px-3 text-xs"
+              onClick={() => {
+                playClick();
+                openModel();
+              }}
+            >
+              Модель
+            </button>
           </div>
+          {car.model ? <p className="mt-1 text-center text-[11px] text-subtle">{car.model}</p> : null}
           <div className="plate-well mt-3">
             <RussianPlate plate={car.plate} region={car.region} />
           </div>

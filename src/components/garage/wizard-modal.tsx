@@ -66,7 +66,6 @@ export function WizardModal() {
   if (step === "acquire") {
     body = (
       <>
-        <h2 className="text-center text-lg font-semibold">Как получили авто?</h2>
         <div className="mt-8 flex flex-col gap-3 sm:flex-row">
           <button
             type="button"
@@ -106,7 +105,6 @@ export function WizardModal() {
   } else if (step === "name") {
     body = (
       <>
-        <h2 className="text-center text-lg font-semibold">Название авто</h2>
         <div className="mx-auto mt-6 w-full max-w-xs">
           <input
             className="field"
@@ -125,7 +123,6 @@ export function WizardModal() {
   } else if (step === "plate") {
     body = (
       <>
-        <h2 className="text-center text-lg font-semibold">Госномер</h2>
         <div className="mx-auto mt-6 flex w-full max-w-sm items-end justify-center gap-3">
           <label className="block min-w-0 flex-1">
             <span className="mb-1.5 block text-xs text-muted">Номер</span>
@@ -164,7 +161,6 @@ export function WizardModal() {
   } else if (step === "image") {
     body = (
       <>
-        <h2 className="text-center text-lg font-semibold">Изображение</h2>
         <p className="mt-2 text-center text-xs text-muted">
           {draftImage ? "Файл выбран и попадёт в локальный альбом по названию." : "Можно пропустить."}
         </p>
@@ -210,7 +206,6 @@ export function WizardModal() {
   } else if (step === "buy") {
     body = (
       <>
-        <h2 className="text-center text-lg font-semibold">За сколько купили авто?</h2>
         <div className="mx-auto mt-6 w-full max-w-xs">
           <input
             className="field"
@@ -231,7 +226,6 @@ export function WizardModal() {
   } else if (step === "official") {
     body = (
       <>
-        <h2 className="text-center text-lg font-semibold">Госцена</h2>
         <div className="mx-auto mt-6 w-full max-w-xs">
           <input
             className="field"
@@ -252,7 +246,6 @@ export function WizardModal() {
   } else if (step === "scrap") {
     body = (
       <>
-        <h2 className="text-center text-lg font-semibold">Цена свалки</h2>
         <div className="mx-auto mt-6 w-full max-w-xs">
           <input
             className="field"
@@ -275,7 +268,6 @@ export function WizardModal() {
     const daily = draftDaily.trim() ? parseMoney(draftDaily) : NaN;
     body = (
       <>
-        <h2 className="text-center text-lg font-semibold">Тариф</h2>
         <p className="mt-2 text-center text-xs text-muted">Задайте цену за час и за сутки. Потом создадим карточку.</p>
         <div className="mt-6 grid gap-3 sm:grid-cols-2">
           <button
@@ -310,10 +302,25 @@ export function WizardModal() {
     );
   }
 
+  const titles: Record<string, string> = {
+    acquire: "Как получили авто",
+    name: "Название авто",
+    plate: "Госномер",
+    image: "Изображение",
+    buy: "За сколько купили авто",
+    official: "Госцена",
+    scrap: "Цена свалки",
+    tariff: "Тариф",
+  };
+
   return (
     <div className="backdrop-enter backdrop-blurred fixed inset-0 z-40 flex items-center justify-center p-4">
-      <div className="modal-enter w-full max-w-md bg-elevated px-8 py-8" role="dialog" aria-modal="true">
-        {body}
+      <div className="modal-enter w-full max-w-md overflow-hidden bg-elevated" role="dialog" aria-modal="true">
+        <div className="pop-head">
+          <p>{titles[step] ?? "Новое авто"}</p>
+          <div className="header-pulse-line" />
+        </div>
+        <div className="px-8 py-7">{body}</div>
       </div>
     </div>
   );

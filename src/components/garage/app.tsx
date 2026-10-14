@@ -7,7 +7,7 @@ import { GarageOverlays, GarageToasts } from "@/components/garage/overlays";
 import { AmbientDust } from "@/components/garage/particles";
 import { SplashScreen } from "@/components/garage/splash";
 import { useGarage } from "@/lib/garage/store";
-import { filterCars, playClick } from "@/lib/garage/utils";
+import { filterCars, money, playClick } from "@/lib/garage/utils";
 
 function GarageShell() {
   const cars = useGarage((s) => s.cars);
@@ -16,6 +16,9 @@ function GarageShell() {
   const openWizard = useGarage((s) => s.openWizard);
   const bootCheck = useGarage((s) => s.bootCheck);
   const visible = filterCars(cars, search);
+  const fleetOfficial = cars.reduce((sum, car) => sum + (car.officialPrice ?? 0), 0);
+  const earnedToday = cars.reduce((sum, car) => sum + (car.earnedToday || 0), 0);
+  const earnedAll = cars.reduce((sum, car) => sum + (car.earnedTotal || 0), 0);
 
   useEffect(() => {
     const finish = () => bootCheck();
@@ -28,7 +31,7 @@ function GarageShell() {
     <div className="relative flex min-h-dvh flex-col">
       <AmbientDust />
       <GarageHeader />
-      <main className="relative z-10 flex min-h-0 flex-1 flex-col px-3 pt-4 pb-28 md:px-5 md:pt-4">
+      <main className="relative z-10 flex min-h-0 flex-1 flex-col px-3 pt-4 pb-32 md:px-5 md:pt-4">
         {visible.length === 0 ? (
           <div className="flex flex-1 flex-col items-center justify-center px-6">
             <Car className="mb-4 size-10 text-subtle" strokeWidth={1.5} />
@@ -58,19 +61,33 @@ function GarageShell() {
           </div>
         )}
       </main>
-      <button
-        type="button"
-        className="api-btn"
-        onClick={() => {
-          playClick();
-          openApi();
-        }}
-      >
-        <ApiGlyph className="size-4" />
-        <span>API</span>
-      </button>
+      <div className="fleet-dock">
+        <button
+          type="button"
+          className="api-btn"
+          onClick={() => {
+            playClick();
+            openApi();
+          }}
+        >
+          <ApiGlyph className="size-4" />
+          <span>API</span>
+        </button>
+        <FleetStat label="Цена автопарка" value={money(fleetOfficial)} />
+        <FleetStat label="Заработали сегодня" value={money(earnedToday)} />
+        <FleetStat label="Заработано всего" value={money(earnedAll)} />
+      </div>
       <GarageOverlays />
       <GarageToasts />
+    </div>
+  );
+}
+
+function FleetStat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="fleet-stat">
+      <span>{label}</span>
+      <strong>{value}</strong>
     </div>
   );
 }

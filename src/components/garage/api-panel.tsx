@@ -15,10 +15,14 @@ export function ApiPanel() {
 
   return (
     <div className="backdrop-enter backdrop-blurred fixed inset-0 z-40 flex items-center justify-center p-4">
-      <div className="modal-enter relative w-full max-w-md bg-elevated px-8 py-8" role="dialog" aria-modal="true">
+      <div className="modal-enter relative w-full max-w-md overflow-hidden bg-elevated" role="dialog" aria-modal="true">
+        <div className="pop-head">
+          <p>API</p>
+          <div className="header-pulse-line" />
+        </div>
         <button
           type="button"
-          className="absolute top-4 right-4 size-8 text-lg text-muted hover:text-fg"
+          className="absolute top-3 right-4 z-10 size-8 text-lg text-muted hover:text-fg"
           aria-label="Закрыть"
           onClick={() => {
             playClick();
@@ -27,8 +31,8 @@ export function ApiPanel() {
         >
           ×
         </button>
-        <h2 className="text-center text-lg font-semibold">API</h2>
-        <p className="mt-2 text-center text-xs leading-relaxed text-muted">
+        <div className="px-8 py-7">
+        <p className="text-center text-xs leading-relaxed text-muted">
           Ключ сохранится на этом устройстве. Запросы уходят только когда вы сами обновляете рынок.
         </p>
         <label className="mt-6 block">
@@ -79,6 +83,7 @@ export function ApiPanel() {
         ) : (
           <p className="mt-5 text-center text-xs text-subtle">Сервер ещё не выбран</p>
         )}
+        </div>
       </div>
     </div>
   );
